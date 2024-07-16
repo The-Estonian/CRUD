@@ -16,7 +16,7 @@ const sequelize = new Sequelize(
 );
 
 // Define a model
-const MovieOrders = sequelize.define('orders', {
+const Orders = sequelize.define('orders', {
   user_id: {
     type: DataTypes.STRING,
     allowNull: false,
@@ -36,17 +36,21 @@ sequelize.sync().then(() => console.log('Database & tables created!'));
 
 // Middleware to parse JSON
 app.use(express.json());
-
+console.log("billing incoming");
 app.get('/api/billing', async (req, res) => {
-  const movies = await MovieOrders.findAll();
+  const movies = await Orders.findAll();
   console.log(movies);
   res.json(movies);
 });
 
 app.post('/api/billing', async (req, res) => {
   try {
-    const { title, description } = req.body;
-    const movie = await MovieOrders.create({ title, description });
+    const { user_id, number_of_items, total_amount } = req.body;
+    const movie = await Orders.create({
+      user_id,
+      number_of_items,
+      total_amount,
+    });
     res.status(201).json(movie);
   } catch (error) {
     console.error('Error creating billing:', error);

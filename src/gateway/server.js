@@ -44,9 +44,6 @@ amqp.connect(rabbitMqUrl, (error0, connection) => {
 });
 
 function consumeMessages(channel) {
-  console.log(
-    `[*] Waiting for messages in billing_queue. To exit press CTRL+C`
-  );
 
   channel.consume(
     'billing_queue',
@@ -54,26 +51,48 @@ function consumeMessages(channel) {
       const msg = message.content.toString();
       console.log(`[x] Received ${msg}`);
 
-      try {
-        // Forward message to the billing API server
-        const response = await axios.post(billingApiUrl, JSON.parse(msg), {
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        });
-        console.log(
-          `[>] Forwarded ${msg} to ${billingApiUrl}. Response: ${response.status}`
-        );
-      } catch (error) {
-        console.error(
-          `Error forwarding message ${msg} to ${billingApiUrl}:`,
-          error.message
-        );
+      async function sendToBillingWithRetry(msg, retryCount = 0) {
+        try {
+          await sendToBilling(msg);
+          channel.ack(message);
+        } catch (error) {
+          console.error(
+            `Error forwarding message ${msg} to ${billingApiUrl}:`,
+            error.message
+          );
+
+          if (retryCount < 5) {
+            // Retry up to 3 times
+            const delayMs = Math.pow(2, retryCount) * 2000;
+            console.log(`Retry attempt ${retryCount + 1} in ${delayMs}ms`);
+            setTimeout(
+              () => sendToBillingWithRetry(msg, retryCount + 1),
+              delayMs
+            );
+          } else {
+            console.error(
+              `Max retries exceeded for message ${msg}. Discarding message.`
+            );
+            channel.ack(message);
+          }
+        }
       }
 
-      channel.ack(message);
+      // Start initial attempt
+      sendToBillingWithRetry(msg);
     },
     { noAck: false }
+  );
+}
+
+async function sendToBilling(msg) {
+  const response = await axios.post(billingApiUrl, JSON.parse(msg), {
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  });
+  console.log(
+    `[>] Forwarded ${msg} to ${billingApiUrl}. Response: ${response.status}`
   );
 }
 
