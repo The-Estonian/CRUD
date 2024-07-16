@@ -1,5 +1,5 @@
 {
-  "name": "inventory",
+  "name": "gateway",
   "version": "1.0.0",
   "description": "",
   "main": "server.js",
@@ -11,12 +11,10 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "dotenv": "^16.4.5",
+    "amqplib": "^0.10.4",
+    "axios": "^1.7.2",
     "express": "^4.19.2",
-    "pg": "^8.12.0",
-    "pg-hstore": "^2.3.4",
-    "pm2": "^5.4.2",
-    "sequelize": "^6.37.3",
-    "sqlite3": "^5.1.7"
+    "http-proxy-middleware": "^3.0.0",
+    "pm2": "^5.4.2"
   }
 }

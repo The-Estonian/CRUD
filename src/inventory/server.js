@@ -1,13 +1,19 @@
+require('dotenv').config({ path: '/home/env/.env' });
 const express = require('express');
 const { Sequelize, DataTypes } = require('sequelize');
 const app = express();
 const port = 8080;
 
 // Initialize Sequelize to use PostgreSQL
-const sequelize = new Sequelize('movies', 'inventory', 'inventory', {
-  host: 'localhost',
-  dialect: 'postgres',
-});
+const sequelize = new Sequelize(
+  process.env.INVENTORY_DATABASE_NAME,
+  process.env.INVENTORY_DATABASE_USER,
+  process.env.INVENTORY_DATABASE_PASSWORD,
+  {
+    host: process.env.INVENTORY_DATABASE_HOST,
+    dialect: 'postgres',
+  }
+);
 
 // Define a model
 const Movies = sequelize.define('movies', {
@@ -28,17 +34,17 @@ sequelize.sync().then(() => console.log('Database & tables created!'));
 app.use(express.json());
 
 // Define routes
-app.get('/', (req, res) => {
-  res.send('Hello World!');
+app.get('/api/movies/test', (req, res) => {
+  res.send('Hello from inventory');
 });
 
-app.get('/movies', async (req, res) => {
+app.get('/api/movies', async (req, res) => {
   const movies = await Movies.findAll();
   console.log(movies);
   res.json(movies);
 });
 
-app.post('/movies', async (req, res) => {
+app.post('/api/movies', async (req, res) => {
   try {
     const { title, description } = req.body;
     const movie = await Movies.create({ title, description });
@@ -49,7 +55,20 @@ app.post('/movies', async (req, res) => {
   }
 });
 
-// Start the serverls
+app.delete('/api/movies', async (req, res) => {
+  try {
+    const deletedCount = await Movies.destroy({
+      where: {},
+      truncate: true,
+    });
+    console.log(`Deleted ${deletedCount} movies`);
+    res.status(200).json({ message: 'All movies have been deleted' });
+  } catch (error) {
+    console.error('Error deleting movies:', error);
+    res.status(500).json({ error: 'An error occurred while deleting movies' });
+  }
+});
+
 app.listen(port, () => {
-  console.log(`Server is running on http://192.168.56.101:${port}`);
+  console.log(`Server is running on http://192.168.56.103:${port}`);
 });

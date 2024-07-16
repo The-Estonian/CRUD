@@ -1,15 +1,14 @@
 const express = require('express');
 const { createProxyMiddleware } = require('http-proxy-middleware');
 const amqp = require('amqplib/callback_api');
+const axios = require('axios');
 
 const app = express();
 const port = 8080;
 
-// Middleware to parse JSON
-app.use(express.json());
+const inventoryApiUrl = 'http://192.168.56.103:8080/api/movies';
+const billingApiUrl = 'http://192.168.56.102:8080/api/billing';
 
-// Proxy setup for Inventory API
-const inventoryApiUrl = 'http://192.168.56.101:8080';
 app.use(
   '/api/movies',
   createProxyMiddleware({
@@ -40,7 +39,49 @@ amqp.connect(rabbitMqUrl, (error0, connection) => {
     channel.assertQueue(queue, {
       durable: true,
     });
+    consumeMessages(channel);
   });
+});
+
+function consumeMessages(channel) {
+  console.log(
+    `[*] Waiting for messages in billing_queue. To exit press CTRL+C`
+  );
+
+  channel.consume(
+    'billing_queue',
+    async (message) => {
+      const msg = message.content.toString();
+      console.log(`[x] Received ${msg}`);
+
+      try {
+        // Forward message to the billing API server
+        const response = await axios.post(billingApiUrl, JSON.parse(msg), {
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+        console.log(
+          `[>] Forwarded ${msg} to ${billingApiUrl}. Response: ${response.status}`
+        );
+      } catch (error) {
+        console.error(
+          `Error forwarding message ${msg} to ${billingApiUrl}:`,
+          error.message
+        );
+      }
+
+      channel.ack(message);
+    },
+    { noAck: false }
+  );
+}
+
+// Middleware to parse JSON
+app.use(express.json());
+
+app.get('/api/gateway', (req, res) => {
+  res.send('Hello from gateway');
 });
 
 // Route for Billing API
@@ -58,5 +99,5 @@ app.post('/api/billing', (req, res) => {
 
 // Start the server
 app.listen(port, () => {
-  console.log(`Gateway running at http://localhost:${port}`);
+  console.log(`Gateway running at http://192.168.56.101:${port}`);
 });
