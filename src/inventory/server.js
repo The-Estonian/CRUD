@@ -33,11 +33,6 @@ sequelize.sync().then(() => console.log('Database & tables created!'));
 // Middleware to parse JSON
 app.use(express.json());
 
-// Define routes
-app.get('/api/movies/test', (req, res) => {
-  res.send('Hello from inventory');
-});
-
 app.get('/api/movies', async (req, res) => {
   const movies = await Movies.findAll();
   console.log(movies);

@@ -36,22 +36,22 @@ sequelize.sync().then(() => console.log('Database & tables created!'));
 
 // Middleware to parse JSON
 app.use(express.json());
-console.log("billing incoming");
+
 app.get('/api/billing', async (req, res) => {
-  const movies = await Orders.findAll();
-  console.log(movies);
-  res.json(movies);
+  const billing = await Orders.findAll();
+  console.log(billing);
+  res.json(billing);
 });
 
 app.post('/api/billing', async (req, res) => {
   try {
     const { user_id, number_of_items, total_amount } = req.body;
-    const movie = await Orders.create({
+    const billing = await Orders.create({
       user_id,
       number_of_items,
       total_amount,
     });
-    res.status(201).json(movie);
+    res.status(201).json(billing);
   } catch (error) {
     console.error('Error creating billing:', error);
     res.status(500).json({ error: error });
